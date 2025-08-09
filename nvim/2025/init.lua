@@ -81,6 +81,12 @@ vim.api.nvim_create_autocmd("LspAttach", {
 	end,
 })
 
+-- Autowrite template file to new C files
+vim.api.nvim_create_autocmd("BufNewFile", {
+  pattern = "*.c",
+  command = "0r ~/.config/nvim/templates/hello.c"
+})
+
 -- colors
 require "vague".setup({ transparent = true })
 vim.cmd("colorscheme vague")

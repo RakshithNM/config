@@ -21,6 +21,8 @@ vim.g.mapleader = " "
 -- Netrw
 vim.g.netrw_banner = 0 -- No banner
 vim.g.netrw_liststyle = 3 -- Tree style file tree
+vim.g.netrw_sort_by = "time" -- Most recent at top
+vim.g.netrw_sort_direction = "reverse"
 
 local map = vim.keymap.set
 
@@ -85,6 +87,30 @@ vim.api.nvim_create_autocmd("LspAttach", {
 vim.api.nvim_create_autocmd("BufNewFile", {
   pattern = "*.c",
   command = "0r ~/.config/nvim/templates/hello.c"
+})
+
+if vim.fn.executable("rg") == 1 then
+  vim.opt.grepprg = [[rg --vimgrep --smart-case --hidden --glob '!.git/*']]
+  vim.opt.grepformat = { "%f:%l:%c:%m" }
+end
+-- <leader>gr => grep word under cursor, open quickfix
+vim.keymap.set('n', '<leader>gr', function()
+  local word = vim.fn.expand('<cword>')
+  if word == nil or word == '' then return end
+  vim.cmd('silent! grep! ' .. vim.fn.shellescape(word))
+  vim.cmd('copen')
+end, { desc = 'Grep <cword> and open quickfix' })
+map('n', '<leader>q', ':cclose<CR>', { silent = true, desc = 'Quickfix: close' })
+map('n', '<leader>cn',':cnext<CR>', { silent = true, desc = 'Quickfix: next' })
+map('n', '<leader>cp',':cprevious<CR>', { silent = true, desc = 'Quickfix: prev' })
+
+-- Line numbers in netrw
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "netrw",
+  callback = function()
+    vim.opt_local.number = true
+    vim.opt_local.relativenumber = true
+  end
 })
 
 -- colors

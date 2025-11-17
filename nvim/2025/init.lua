@@ -32,6 +32,9 @@ map('n', '<leader>q', ':quit<CR>')
 
 map({ 'n', 'v', 'x' }, 'yy', '"+y<CR>')
 
+-- Compile and Run C programs within vim
+map('n', '<F5>', ':write<CR>:!gcc %<CR>')
+
 -- Lazygit, Files, Grep and Help
 map('n', '<leader>gg', function()
 	vim.cmd('terminal lazygit')
@@ -40,13 +43,20 @@ end, { desc = "Open lazygit in terminal" })
 map('n', '<leader><leader>', ":Pick files<CR>")
 map('n', '<leader>/', ":Pick grep<CR>")
 map('n', '<leader>h', ":Pick help<CR>")
+map('n', '<leader>a', 'ggVG')
 
 vim.pack.add({
 	{ src = "https://github.com/vague2k/vague.nvim" },
 	{ src = "https://github.com/echasnovski/mini.pick" },
 	{ src = "https://github.com/neovim/nvim-lspconfig" },
-	{ src = "https://github.com/nvim-treesitter/nvim-treesitter" }
+	{ src = "https://github.com/nvim-treesitter/nvim-treesitter" },
+  { src = "https://github.com/m4xshen/hardtime.nvim" }
 })
+require("hardtime").setup {
+  max_time = 300,
+  max_count = 1
+}
+
 require "mini.pick".setup()
 require "nvim-treesitter.configs".setup {
 	ensure_installed = { "javascript", "typescript", "lua", "c" },
@@ -59,9 +69,10 @@ require "nvim-treesitter.configs".setup {
 	textobjects = { enable = true },
 }
 
-vim.lsp.enable({ 'lua_ls', 'tsserver' })
+vim.lsp.enable({ 'lua_ls', 'tsserver', 'html', 'css', 'jsonls' })
 map('n', '<leader>lf', vim.lsp.buf.format)
 
+vim.lsp.config('css', {})
 vim.lsp.config('tsserver', {
 	cmd = { "typescript-language-server", "--stdio" },
 	filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
@@ -77,16 +88,24 @@ vim.lsp.config('lua_ls', {
 	}
 })
 
+-- Ctrl-x Ctrl-o in normal mode
 vim.api.nvim_create_autocmd("LspAttach", {
 	callback = function(args)
 		vim.bo[args.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
 	end,
 })
 
+-- Completion in insert mode
+map('i', '<leader>f', '<C-x><C-n>', { noremap = true, silent = true })
+
 -- Autowrite template file to new C files
 vim.api.nvim_create_autocmd("BufNewFile", {
   pattern = "*.c",
-  command = "0r ~/.config/nvim/templates/hello.c"
+  command = "0r ~/REPOS/config/nvim/2025/templates/c.c"
+})
+vim.api.nvim_create_autocmd("BufNewFile", {
+  pattern = "*.cc",
+  command = "0r ~/REPOS/config/nvim/2025/templates/cpp.cc"
 })
 
 if vim.fn.executable("rg") == 1 then
@@ -94,7 +113,7 @@ if vim.fn.executable("rg") == 1 then
   vim.opt.grepformat = { "%f:%l:%c:%m" }
 end
 -- <leader>gr => grep word under cursor, open quickfix
-vim.keymap.set('n', '<leader>gr', function()
+map('n', '<leader>gr', function()
   local word = vim.fn.expand('<cword>')
   if word == nil or word == '' then return end
   vim.cmd('silent! grep! ' .. vim.fn.shellescape(word))

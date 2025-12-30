@@ -50,11 +50,63 @@ vim.pack.add({
 	{ src = "https://github.com/echasnovski/mini.pick" },
 	{ src = "https://github.com/neovim/nvim-lspconfig" },
 	{ src = "https://github.com/nvim-treesitter/nvim-treesitter" },
-  { src = "https://github.com/m4xshen/hardtime.nvim" }
+  { src = "https://github.com/m4xshen/hardtime.nvim" },
+  { src = "https://github.com/RakshithNM/logdebug.nvim" }
 })
 require("hardtime").setup {
   max_time = 300,
   max_count = 1
+}
+require("logdebug").setup {
+  keymap_visual = "<leader>lv",
+  keymap_find = "<leader>fl",
+  filetypes = {
+    "javascript",
+    "typescript",
+    "javascriptreact",
+    "typescriptreact",
+    "vue",
+    "go",
+    "lua",
+    "ruby",
+    "python",
+  },
+-- optional filetype filter
+  languages = {
+    go = {
+      build_log = function(indent, _level, expr)
+        return string.format('%slog.Printf("%%+v", %s)', indent, expr)
+      end,
+      is_log_line = function(line, _levels)
+        return line:match("^%s*log%.Printf%(") ~= nil
+      end,
+    },
+    lua = {
+      build_log = function(indent, _level, expr)
+        return string.format("%sprint(vim.inspect(%s))", indent, expr)
+      end,
+      is_log_line = function(line, _levels)
+        return line:match("^%s*print%(") ~= nil
+          or line:match("^%s*vim%.print%(") ~= nil
+      end,
+    },
+    ruby = {
+      build_log = function(indent, _level, expr)
+        return string.format("%sputs(%s.inspect)", indent, expr)
+      end,
+      is_log_line = function(line)
+        return line:match("^%s*puts%(") ~= nil
+      end,
+    },
+    python = {
+      build_log = function(indent, _level, expr)
+        return string.format("%sprint(%s)", indent, expr)
+      end,
+      is_log_line = function(line)
+        return line:match("^%s*print%(") ~= nil
+      end,
+    },
+  },
 }
 
 require "mini.pick".setup()

@@ -172,6 +172,26 @@ vim.api.nvim_create_autocmd("LspAttach", {
     nmap('<leader>ca', vim.lsp.buf.code_action, "Code action")
   end
 })
+
+-- Diagnostics
+vim.diagnostic.config({
+  virtual_text = true,
+  signs = true,
+  underline = true,
+  update_in_insert = false,
+  severity_sort = true,
+  float = { border = "rounded", source = true }
+})
+map('n', '<leader>cd', vim.diagnostic.open_float, { desc = "Diagnostics: line float" })
+map('n', '[d', vim.diagnostic.goto_prev, { desc = "Prev diagnostic" })
+map('n', ']d', vim.diagnostic.goto_next, { desc = "Next diagnostic" })
+map('n', '<leader>dq', function()
+  vim.diagnostic.setqflist({ open = true })
+end, { desc = "Diagnostics → Quickfix" })
+map('n', '<leader>dl', function()
+  vim.diagnostic.setloclist({ open = true })
+end, { desc = "Diagnostics → Loclist" })
+
 vim.lsp.config('cssls', {})
 vim.lsp.config('ts_ls', {
 	cmd = { "typescript-language-server", "--stdio" },

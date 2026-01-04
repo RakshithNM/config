@@ -71,18 +71,37 @@ vim.pack.add({
 })
 
 -- Plugin configurations (lazy loaded)
--- Glow (markdown preview) - lazy load on markdown files
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "markdown",
-  callback = function()
-    vim.cmd("packadd glow.nvim")
-    local glow_ok, glow = pcall(require, "glow")
-    if glow_ok then
-      glow.setup { cmd = "Glow", config = true }
+-- Glow (markdown preview) - setup at startup, command available when needed
+vim.schedule(function()
+  vim.cmd("packadd glow.nvim")
+  local glow_ok, glow = pcall(require, "glow")
+  if glow_ok then
+    -- Find glow binary path - try exepath first, then common locations
+    local glow_path = vim.fn.exepath("glow")
+    if glow_path == "" or glow_path == vim.NIL then
+      -- Check common Homebrew locations
+      local homebrew_paths = { "/opt/homebrew/bin/glow", "/usr/local/bin/glow" }
+      for _, path in ipairs(homebrew_paths) do
+        if vim.fn.executable(path) == 1 then
+          glow_path = path
+          break
+        end
+      end
     end
-  end,
-  once = true,
-})
+
+    glow.setup {
+      glow_path = (glow_path ~= "" and glow_path ~= vim.NIL) and glow_path or "/opt/homebrew/bin/glow",
+      install_path = (glow_path ~= "" and glow_path ~= vim.NIL) and glow_path or "/opt/homebrew/bin/glow",
+      style = "dark",
+      border = "rounded",
+      pager = false,
+      width = 90,
+      height = 90,
+      width_ratio = 0.9,
+      height_ratio = 0.9,
+    }
+  end
+end)
 
 -- Hardtime (vim practice) - must load at startup to intercept keys
 vim.schedule(function()
@@ -115,65 +134,62 @@ vim.schedule(function()
   end
 end)
 
--- Logdebug - lazy load on supported filetypes
-local logdebug_loaded = false
-local logdebug_filetypes = {
-  "javascript", "typescript", "javascriptreact", "typescriptreact",
-  "vue", "go", "lua", "ruby", "python"
-}
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = table.concat(logdebug_filetypes, ","),
-  callback = function()
-    if not logdebug_loaded then
-      logdebug_loaded = true
-      vim.cmd("packadd logdebug.nvim")
-      local logdebug_ok, logdebug = pcall(require, "logdebug")
-      if logdebug_ok then
-        logdebug.setup {
-          keymap_visual = "<leader>lv",
-          keymap_find = "<leader>fl",
-          filetypes = logdebug_filetypes,
-          languages = {
-            go = {
-              build_log = function(indent, _level, expr)
-                return string.format('%slog.Printf("%%+v", %s)', indent, expr)
-              end,
-              is_log_line = function(line, _levels)
-                return line:match("^%s*log%.Printf%(") ~= nil
-              end,
-            },
-            lua = {
-              build_log = function(indent, _level, expr)
-                return string.format("%sprint(vim.inspect(%s))", indent, expr)
-              end,
-              is_log_line = function(line, _levels)
-                return line:match("^%s*print%(") ~= nil
-                  or line:match("^%s*vim%.print%(") ~= nil
-              end,
-            },
-            ruby = {
-              build_log = function(indent, _level, expr)
-                return string.format("%sputs(%s.inspect)", indent, expr)
-              end,
-              is_log_line = function(line)
-                return line:match("^%s*puts%(") ~= nil
-              end,
-            },
-            python = {
-              build_log = function(indent, _level, expr)
-                return string.format("%sprint(%s)", indent, expr)
-              end,
-              is_log_line = function(line)
-                return line:match("^%s*print%(") ~= nil
-              end,
-            },
-          },
-        }
-      end
-    end
-  end,
-  once = true,
-})
+-- Logdebug - setup at startup for all supported filetypes
+vim.schedule(function()
+  vim.cmd("packadd logdebug.nvim")
+  local logdebug_ok, logdebug = pcall(require, "logdebug")
+  if logdebug_ok then
+    local logdebug_filetypes = {
+      "javascript", "typescript", "javascriptreact", "typescriptreact",
+      "vue", "go", "lua", "ruby", "python"
+    }
+    logdebug.setup {
+      keymap_below = "<leader>wlb", -- log word below cursor
+      keymap_above = "<leader>wla", -- log word above cursor
+      keymap_remove = "<leader>dl", -- delete all console logs
+      keymap_comment = "<leader>kl", -- comment out all console logs
+      keymap_toggle = "<leader>tll", -- toggle log level
+      keymap_visual = "<leader>lv", -- visual mode log
+      keymap_find = "<leader>fl", -- find logs
+      filetypes = logdebug_filetypes,
+      languages = {
+        go = {
+          build_log = function(indent, _level, expr)
+            return string.format('%slog.Printf("%%+v", %s)', indent, expr)
+          end,
+          is_log_line = function(line, _levels)
+            return line:match("^%s*log%.Printf%(") ~= nil
+          end,
+        },
+        lua = {
+          build_log = function(indent, _level, expr)
+            return string.format("%sprint(vim.inspect(%s))", indent, expr)
+          end,
+          is_log_line = function(line, _levels)
+            return line:match("^%s*print%(") ~= nil
+              or line:match("^%s*vim%.print%(") ~= nil
+          end,
+        },
+        ruby = {
+          build_log = function(indent, _level, expr)
+            return string.format("%sputs(%s.inspect)", indent, expr)
+          end,
+          is_log_line = function(line)
+            return line:match("^%s*puts%(") ~= nil
+          end,
+        },
+        python = {
+          build_log = function(indent, _level, expr)
+            return string.format("%sprint(%s)", indent, expr)
+          end,
+          is_log_line = function(line)
+            return line:match("^%s*print%(") ~= nil
+          end,
+        },
+      },
+    }
+  end
+end)
 
 -- Treesitter setup (deferred until first buffer)
 local treesitter_setup_done = false

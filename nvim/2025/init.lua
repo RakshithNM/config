@@ -59,18 +59,17 @@ map('n', '<leader>gg', function()
 	vim.cmd('terminal lazygit')
 	vim.cmd('startinsert')
 end, { desc = "Open lazygit in terminal" })
-map('n', '<leader><leader>', ":Pick files<CR>")
-map('n', '<leader>/', ":Pick grep<CR>")
-map('n', '<leader>h', ":Pick help<CR>")
-map('n', '<leader>a', 'ggVG')
+
 
 vim.pack.add({
 	{ src = "https://github.com/vague2k/vague.nvim" },
-	{ src = "https://github.com/echasnovski/mini.pick" },
-	{ src = "https://github.com/neovim/nvim-lspconfig" },
 	{ src = "https://github.com/nvim-treesitter/nvim-treesitter" },
-  { src = "https://github.com/m4xshen/hardtime.nvim" },
+  { src = "https://github.com/nvim-lua/plenary.nvim" },
+  { src = "https://github.com/nvim-telescope/telescope-fzf-native.nvim" },
+  { src = "https://github.com/nvim-telescope/telescope.nvim" },
+	{ src = "https://github.com/neovim/nvim-lspconfig" },
   { src = "https://github.com/RakshithNM/logdebug.nvim" },
+  { src = "https://github.com/m4xshen/hardtime.nvim" },
   { src = "https://github.com/ellisonleao/glow.nvim" }
 })
 require("glow").setup {
@@ -133,8 +132,7 @@ require("logdebug").setup {
   },
 }
 
-require "mini.pick".setup()
-require "nvim-treesitter.configs".setup {
+require "nvim-treesitter".setup {
 	ensure_installed = { 
     "javascript", 
     "typescript", 
@@ -170,6 +168,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
     nmap('K',  vim.lsp.buf.hover, "Hover")
     nmap('<leader>rn', vim.lsp.buf.rename, "Rename")
     nmap('<leader>ca', vim.lsp.buf.code_action, "Code action")
+    -- Ctrl-x Ctrl-o in normal mode
+		vim.bo[args.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
   end
 })
 
@@ -208,12 +208,11 @@ vim.lsp.config('lua_ls', {
 	}
 })
 
--- Ctrl-x Ctrl-o in normal mode
-vim.api.nvim_create_autocmd("LspAttach", {
-	callback = function(args)
-		vim.bo[args.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
-	end,
-})
+local builtin = require('telescope.builtin')
+map('n', '<leader><leader>', builtin.find_files, { desc = 'Telescope find files' })
+map('n', '<leader>/', builtin.live_grep, { desc = 'Telescope live grep' })
+map('n', '<leader>h', builtin.help_tags, { desc = 'Telescope help tags' })
+map('n', '<leader>a', 'ggVG')
 
 -- Completion in insert mode
 map('i', '<leader>f', '<C-x><C-n>', { noremap = true, silent = true })

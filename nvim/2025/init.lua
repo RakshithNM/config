@@ -242,12 +242,26 @@ map('n', '<leader>gr', function()
     vim.notify('No matches for: ' .. word)
   end
 end, { desc = 'Grep word under cursor' })
--- map('n', '<leader>gr', function()
---   local word = vim.fn.expand('<cword>')
---   if word == nil or word == '' then return end
---   vim.cmd('silent! grep! ' .. vim.fn.shellescape(word))
---   vim.cmd('copen')
--- end, { desc = 'Grep <cword> and open quickfix' })
+-- Close quickfix (or loclist) after jumping to an item
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "qf",
+  callback = function(ev)
+    local function open_and_close()
+      local info = vim.fn.getwininfo(vim.api.nvim_get_current_win())[1]
+      local is_loclist = info and info.loclist == 1
+      if is_loclist then
+        vim.cmd("ll")
+        vim.cmd("lclose")
+      else
+        vim.cmd("cc")
+        vim.cmd("cclose")
+      end
+    end
+
+    vim.keymap.set("n", "<CR>", open_and_close, { buffer = ev.buf, silent = true })
+    vim.keymap.set("n", "<2-LeftMouse>", open_and_close, { buffer = ev.buf, silent = true })
+  end,
+})
 map('n', '<leader>q', ':cclose<CR>', { silent = true, desc = 'Quickfix: close' })
 map('n', '<leader>cn',':cnext<CR>', { silent = true, desc = 'Quickfix: next' })
 map('n', '<leader>cp',':cprevious<CR>', { silent = true, desc = 'Quickfix: prev' })

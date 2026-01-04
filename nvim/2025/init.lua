@@ -1,6 +1,5 @@
+-- Options
 vim.o.winborder = "rounded"
-vim.o.signcolumn = "yes"
-vim.o.ignorecase = true
 vim.o.tabstop = 2
 vim.o.shiftwidth = 2
 vim.o.smartindent = true
@@ -29,37 +28,19 @@ vim.opt.signcolumn = "yes"
 vim.opt.cursorline = true
 vim.opt.clipboard = "unnamedplus"
 
--- Netrw
-vim.g.netrw_banner = 0 -- No banner
-vim.g.netrw_liststyle = 3 -- Tree style file tree
-vim.g.netrw_sort_by = "time" -- Most recent at top
-vim.g.netrw_sort_direction = "reverse"
-
 local map = vim.keymap.set
-
-map('n', '<leader>s', ':update<CR> :source<CR>')
-map('n', '<leader>w', ':write<CR>')
-
--- Compile C programs within vim
-map('n', '<F5>', function()
-  vim.cmd.write()
-  local file = vim.fn.expand('%:p')
-  local out  = vim.fn.expand('%:p:r')
-  vim.cmd('!gcc -Wall -Wextra -O2 ' .. vim.fn.shellescape(file) .. ' -o ' .. vim.fn.shellescape(out))
-end, { desc = "Build C" })
-
--- Run built binary
-map('n', '<F6>', function()
-  local out = vim.fn.expand('%:p:r')
-  vim.cmd('!' .. vim.fn.shellescape(out))
-end, { desc = "Run built binary" })
+-- Source current file (useful for config files)
+map('n', '<leader>s', function()
+  vim.cmd.update()
+  vim.cmd.source('%')
+end, { desc = "Save and source current file" })
+map('n', '<leader>w', ':write<CR>', { desc = "Write file" })
 
 -- Lazygit, Files, Grep and Help
 map('n', '<leader>gg', function()
 	vim.cmd('terminal lazygit')
 	vim.cmd('startinsert')
 end, { desc = "Open lazygit in terminal" })
-
 
 vim.pack.add({
 	{ src = "https://github.com/vague2k/vague.nvim" },
@@ -72,15 +53,30 @@ vim.pack.add({
   { src = "https://github.com/m4xshen/hardtime.nvim" },
   { src = "https://github.com/ellisonleao/glow.nvim" }
 })
-require("glow").setup {
-  cmd = "Glow",
-  config = true
-}
-require("hardtime").setup {
-  max_time = 300,
-  max_count = 1
-}
-require("logdebug").setup {
+
+-- Plugin configurations
+-- Glow (markdown preview)
+local glow_ok, glow = pcall(require, "glow")
+if glow_ok then
+  glow.setup {
+    cmd = "Glow",
+    config = true
+  }
+end
+
+-- Hardtime (vim practice)
+local hardtime_ok, hardtime = pcall(require, "hardtime")
+if hardtime_ok then
+  hardtime.setup {
+    max_time = 300,
+    max_count = 1
+  }
+end
+
+-- Logdebug
+local logdebug_ok, logdebug = pcall(require, "logdebug")
+if logdebug_ok then
+  logdebug.setup {
   keymap_visual = "<leader>lv",
   keymap_find = "<leader>fl",
   filetypes = {
@@ -130,9 +126,13 @@ require("logdebug").setup {
       end,
     },
   },
-}
+  }
+end
 
-require "nvim-treesitter".setup {
+-- Treesitter setup
+local treesitter_ok, treesitter = pcall(require, "nvim-treesitter")
+if treesitter_ok then
+  treesitter.setup {
 	ensure_installed = { 
     "javascript", 
     "typescript", 
@@ -153,45 +153,13 @@ require "nvim-treesitter".setup {
 	highlight = { enable = true, additional_vim_regex_highlighting = false },
 	incremental_selection = { enable = true },
 	textobjects = { enable = false },
-}
+  }
+end
 
+-- LSP Configuration
+-- Enable LSP servers
 vim.lsp.enable({ 'lua_ls', 'ts_ls', 'html', 'cssls', 'jsonls' })
-vim.api.nvim_create_autocmd("LspAttach", {
-  callback = function(args)
-    local buf = args.buf
-    local nmap = function(lhs, rhs, desc)
-      vim.keymap.set('n', lhs, rhs, { buffer = buf, desc = desc })
-    end
-    nmap('<leader>lf', vim.lsp.buf.format)
-    nmap('gd', vim.lsp.buf.definition, "Go to definition")
-    nmap('gr', vim.lsp.buf.references, "References")
-    nmap('K',  vim.lsp.buf.hover, "Hover")
-    nmap('<leader>rn', vim.lsp.buf.rename, "Rename")
-    nmap('<leader>ca', vim.lsp.buf.code_action, "Code action")
-    -- Ctrl-x Ctrl-o in normal mode
-		vim.bo[args.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
-  end
-})
-
--- Diagnostics
-vim.diagnostic.config({
-  virtual_text = true,
-  signs = true,
-  underline = true,
-  update_in_insert = false,
-  severity_sort = true,
-  float = { border = "rounded", source = true }
-})
-map('n', '<leader>cd', vim.diagnostic.open_float, { desc = "Diagnostics: line float" })
-map('n', '[d', vim.diagnostic.goto_prev, { desc = "Prev diagnostic" })
-map('n', ']d', vim.diagnostic.goto_next, { desc = "Next diagnostic" })
-map('n', '<leader>dq', function()
-  vim.diagnostic.setqflist({ open = true })
-end, { desc = "Diagnostics → Quickfix" })
-map('n', '<leader>dl', function()
-  vim.diagnostic.setloclist({ open = true })
-end, { desc = "Diagnostics → Loclist" })
-
+-- Configure LSP servers (must be done before enable or in LspAttach)
 vim.lsp.config('cssls', {})
 vim.lsp.config('ts_ls', {
 	cmd = { "typescript-language-server", "--stdio" },
@@ -207,25 +175,74 @@ vim.lsp.config('lua_ls', {
 		}
 	}
 })
+-- LSP keymaps and setup
+vim.api.nvim_create_autocmd("LspAttach", {
+  callback = function(args)
+    local buf = args.buf
+    local nmap = function(lhs, rhs, desc)
+      vim.keymap.set('n', lhs, rhs, { buffer = buf, desc = desc })
+    end
+    
+    -- LSP keymaps
+    nmap('<leader>lf', vim.lsp.buf.format, "Format buffer")
+    nmap('gd', vim.lsp.buf.definition, "Go to definition")
+    nmap('gr', vim.lsp.buf.references, "References")
+    nmap('K',  vim.lsp.buf.hover, "Hover")
+    nmap('<leader>rn', vim.lsp.buf.rename, "Rename")
+    nmap('<leader>ca', vim.lsp.buf.code_action, "Code action")
+    
+    -- Set omnifunc for completion
+    vim.bo[buf].omnifunc = "v:lua.vim.lsp.omnifunc"
+  end
+})
 
+-- Diagnostics configuration
+vim.diagnostic.config({
+  virtual_text = true,
+  signs = true,
+  underline = true,
+  update_in_insert = false,
+  severity_sort = true,
+  float = { border = "rounded", source = true }
+})
+
+-- Diagnostic keymaps
+map('n', '<leader>cd', vim.diagnostic.open_float, { desc = "Diagnostics: line float" })
+map('n', '[d', vim.diagnostic.goto_prev, { desc = "Prev diagnostic" })
+map('n', ']d', vim.diagnostic.goto_next, { desc = "Next diagnostic" })
+map('n', '<leader>dq', function()
+  vim.diagnostic.setqflist({ open = true })
+end, { desc = "Diagnostics → Quickfix" })
+map('n', '<leader>dl', function()
+  vim.diagnostic.setloclist({ open = true })
+end, { desc = "Diagnostics → Loclist" })
+
+-- Telescope setup
+local telescope_ok, telescope = pcall(require, 'telescope')
+if telescope_ok then
+  telescope.setup({
+    extensions = {
+      fzf = {
+        fuzzy = true,
+        override_generic_sorter = true,
+        override_file_sorter = true,
+        case_mode = "smart_case",
+      }
+    }
+  })
+  -- Load fzf-native extension if available
+  pcall(telescope.load_extension, 'fzf')
+end
+
+-- Telescope keymaps
 local builtin = require('telescope.builtin')
 map('n', '<leader><leader>', builtin.find_files, { desc = 'Telescope find files' })
 map('n', '<leader>/', builtin.live_grep, { desc = 'Telescope live grep' })
 map('n', '<leader>h', builtin.help_tags, { desc = 'Telescope help tags' })
-map('n', '<leader>a', 'ggVG')
+map('n', '<leader>a', 'ggVG', { desc = "Select all" })
 
 -- Completion in insert mode
-map('i', '<leader>f', '<C-x><C-n>', { noremap = true, silent = true })
-
--- Autowrite template file to new C files
-vim.api.nvim_create_autocmd("BufNewFile", {
-  pattern = "*.c",
-  command = "0r ~/REPOS/config/nvim/2025/templates/c.c"
-})
-vim.api.nvim_create_autocmd("BufNewFile", {
-  pattern = "*.cc",
-  command = "0r ~/REPOS/config/nvim/2025/templates/cpp.cc"
-})
+map('i', '<leader>f', '<C-x><C-n>', { noremap = true, silent = true, desc = "Keyword completion" })
 
 if vim.fn.executable("rg") == 1 then
   vim.opt.grepprg = [[rg --vimgrep --smart-case --hidden --glob '!.git/*']]
@@ -266,6 +283,41 @@ map('n', '<leader>q', ':cclose<CR>', { silent = true, desc = 'Quickfix: close' }
 map('n', '<leader>cn',':cnext<CR>', { silent = true, desc = 'Quickfix: next' })
 map('n', '<leader>cp',':cprevious<CR>', { silent = true, desc = 'Quickfix: prev' })
 
+-- Autowrite template file to new C files
+local template_c = vim.fn.expand("~/.config/nvim/templates/c.c")
+if vim.fn.filereadable(template_c) == 1 then
+  vim.api.nvim_create_autocmd("BufNewFile", {
+    pattern = "*.c",
+    command = "0r " .. template_c
+  })
+end
+-- Compile C programs within vim
+map('n', '<F5>', function()
+  vim.cmd.write()
+  local file = vim.fn.expand('%:p')
+  local out  = vim.fn.expand('%:p:r')
+  vim.cmd('!gcc -Wall -Wextra -O2 ' .. vim.fn.shellescape(file) .. ' -o ' .. vim.fn.shellescape(out))
+end, { desc = "Build C" })
+-- Run built binary
+map('n', '<F6>', function()
+  local out = vim.fn.expand('%:p:r')
+  vim.cmd('!' .. vim.fn.shellescape(out))
+end, { desc = "Run built binary" })
+
+-- Autowrite template file to new CPP files
+local template_cpp = vim.fn.expand("~/.config/nvim/templates/cpp.cc")
+if vim.fn.filereadable(template_cpp) == 1 then
+  vim.api.nvim_create_autocmd("BufNewFile", {
+    pattern = "*.cc",
+    command = "0r " .. template_cpp
+  })
+end
+
+-- Netrw
+vim.g.netrw_banner = 0 -- No banner
+vim.g.netrw_liststyle = 3 -- Tree style file tree
+vim.g.netrw_sort_by = "time" -- Most recent at top
+vim.g.netrw_sort_direction = "reverse"
 -- Line numbers in netrw
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "netrw",
@@ -275,7 +327,10 @@ vim.api.nvim_create_autocmd("FileType", {
   end
 })
 
--- colors
-require "vague".setup({ transparent = true })
-vim.cmd("colorscheme vague")
-vim.cmd(":hi statusline guibg=NONE")
+-- Colorscheme
+local vague_ok, vague = pcall(require, "vague")
+if vague_ok then
+  vague.setup({ transparent = true })
+  vim.cmd("colorscheme vague")
+  vim.cmd(":hi statusline guibg=NONE")
+end
